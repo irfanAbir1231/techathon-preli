@@ -1,0 +1,20 @@
+:root {
+  --background-primary: #07111f;
+  --background-secondary: #0b1728;
+  --surface-glass: rgba(255, 255, 255, 0.055);
+  --surface-glass-hover: rgba(255, 255, 255, 0.075);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --text-primary: #f4f7fb;
+  --text-secondary: #a9b4c7;
+  --text-muted: #718096;
+  --blue-primary: #5b8cff;
+  --blue-glow: rgba(91, 140, 255, 0.35);
+  --green-live: #63e6a5;
+  --yellow-light: #ffc85c;
+  --red-alert: #ff6b6b;
+  --amber-warning: #ffbd59;
+  --inactive-device: #6b7280;
+  --sidebar-width: 232px;
+  --radius-card: 22px;
+  --radius-small: 14px;
+}
