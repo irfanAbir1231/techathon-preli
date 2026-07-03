@@ -45,8 +45,6 @@ export const OverviewPage = () => {
         <RoomSummary snapshot={snapshot} />
         <LiveDeviceStatus
           snapshot={snapshot}
-          pendingDeviceIds={pendingDeviceIds}
-          onToggle={toggleDeviceById}
         />
         <ActiveAlertsPanel alerts={snapshot.alerts} limit={3} />
         <div className="right-stack">

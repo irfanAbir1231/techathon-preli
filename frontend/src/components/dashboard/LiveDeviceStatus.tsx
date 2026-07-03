@@ -2,16 +2,11 @@ import type { OfficeSnapshot } from "../../types/office";
 import { countDevices } from "../../utils/deviceUtils";
 import { getRoomDevices, ROOM_NAMES } from "../../utils/roomUtils";
 import { GlassCard } from "../common/GlassCard";
-import { DeviceControl } from "./DeviceControl";
 
 export const LiveDeviceStatus = ({
-  snapshot,
-  pendingDeviceIds,
-  onToggle
+  snapshot
 }: {
   snapshot: OfficeSnapshot;
-  pendingDeviceIds: Set<string>;
-  onToggle: (id: string) => void;
 }) => {
   const counts = countDevices(snapshot.officeState);
 
@@ -30,19 +25,17 @@ export const LiveDeviceStatus = ({
         {ROOM_NAMES.map((room) => {
           const devices = getRoomDevices(snapshot.officeState, room);
           const onCount = devices.filter((device) => device.status === "ON").length;
+          const fanOnCount = devices.filter(
+            (device) => device.type === "fan" && device.status === "ON"
+          ).length;
+          const lightOnCount = devices.filter(
+            (device) => device.type === "light" && device.status === "ON"
+          ).length;
           return (
             <div className="row" key={room}>
               <span>{room}</span>
-              <span className="device-icon-strip">
-                {devices.map((device) => (
-                  <DeviceControl
-                    compact
-                    device={device}
-                    key={device.id}
-                    onToggle={onToggle}
-                    pending={pendingDeviceIds.has(device.id)}
-                  />
-                ))}
+              <span className="muted">
+                Fans {fanOnCount} / 2 · Lights {lightOnCount} / 3
               </span>
               <span className="muted">{onCount} / 5</span>
             </div>

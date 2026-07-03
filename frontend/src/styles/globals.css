@@ -8,6 +8,7 @@
 html {
   min-height: 100%;
   background: var(--background-primary);
+  overflow-x: hidden;
 }
 
 body {
@@ -20,6 +21,11 @@ body {
     radial-gradient(circle at top left, rgba(57, 103, 213, 0.1), transparent 32%),
     radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 28%),
     linear-gradient(135deg, #07111f 0%, #0b1728 48%, #0a1422 100%);
+  overflow-x: hidden;
+}
+
+#root {
+  overflow-x: hidden;
 }
 
 button,
@@ -461,6 +467,7 @@ a {
   border-radius: 12px;
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
   opacity: 0;
+  visibility: hidden;
   transform: translateX(-50%) translateY(6px);
   transition: 140ms ease;
 }
@@ -468,6 +475,7 @@ a {
 .device-control:hover .device-tooltip,
 .device-control:focus-visible .device-tooltip {
   opacity: 1;
+  visibility: visible;
   transform: translateX(-50%) translateY(0);
 }
 
