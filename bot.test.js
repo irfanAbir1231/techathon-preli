@@ -5,6 +5,7 @@ import {
   buildStatusFacts,
   buildUsageFacts,
   createAlertNotifier,
+  formatAlertBatchMessage,
   formatInvalidRoomFallback,
   formatRoomFallback,
   formatStatusFallback,
@@ -174,7 +175,8 @@ test("status facts are created from a snapshot correctly", () => {
   );
 
   const fallback = formatStatusFallback(facts);
-  assert.match(fallback, /Total: 5\/15 devices ON, 210W\./);
+  assert.match(fallback, /⚡ Total: 5\/15 devices ON, 210W/);
+  assert.match(fallback, /- Drawing Room: 2\/5 devices ON, 75W/);
 });
 
 test("room aliases cover short and multi-word names", () => {
@@ -192,11 +194,11 @@ test("room fallback includes device details and room alerts", () => {
   const fallback = formatRoomFallback(facts);
 
   assert.equal(facts.valid, true);
-  assert.match(fallback, /Work Room 1:/);
+  assert.match(fallback, /🏠 Work Room 1/);
   assert.match(fallback, /Power: 135W/);
   assert.match(fallback, /Devices ON: 3\/5/);
-  assert.match(fallback, /Fan 1: ON - 60W/);
-  assert.match(fallback, /Light 3: OFF - 0W/);
+  assert.match(fallback, /Fan 1: ON \(60W\)/);
+  assert.match(fallback, /Light 3: OFF \(0W\)/);
   assert.match(fallback, /outside office hours/);
 });
 
@@ -206,7 +208,7 @@ test("invalid room names return a friendly error", () => {
   assert.equal(facts.valid, false);
   assert.equal(
     formatInvalidRoomFallback(),
-    "I couldn't find that room.\nTry: drawing, work1, or work2."
+    "I couldn't find that room.\nTry: `drawing`, `work1`, or `work2`."
   );
 });
 
@@ -214,8 +216,8 @@ test("usage fallback reports live watts without daily kWh", () => {
   const fallback = formatUsageFallback(buildUsageFacts(sampleSnapshot));
 
   assert.match(fallback, /Total live power: 210W/);
-  assert.match(fallback, /Highest room right now: Work Room 1\./);
-  assert.match(fallback, /Active devices: 5\/15\./);
+  assert.match(fallback, /Highest room right now: Work Room 1/);
+  assert.match(fallback, /Active devices: 5\/15/);
   assert.doesNotMatch(fallback.toLowerCase(), /kwh|daily|today/);
 });
 
@@ -265,5 +267,103 @@ test("alert notifier deduplicates proactive messages by alert id", async () => {
   await notifier.notifyNewAlerts(alerts);
 
   assert.equal(sentMessages.length, 1);
-  assert.match(sentMessages[0], /Office alert:/);
+  assert.match(sentMessages[0], /Office alert update/);
+});
+
+test("alert notifier batches new alerts and shows up to five at once", async () => {
+  const sentMessages = [];
+  const client = {
+    isReady: () => true,
+    channels: {
+      fetch: async () => ({
+        isTextBased: () => true,
+        send: async (message) => {
+          sentMessages.push(message);
+        }
+      })
+    }
+  };
+  const notifier = createAlertNotifier({
+    client,
+    alertChannelId: "channel-1",
+    minBatchIntervalMs: 0
+  });
+  const alerts = Array.from({ length: 7 }, (_, index) => ({
+    id: `alert-${index + 1}`,
+    message: `Alert ${index + 1} from simulation.`
+  }));
+
+  await notifier.notifyNewAlerts(alerts);
+
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0], /Alert 1 from simulation/);
+  assert.match(sentMessages[0], /Alert 5 from simulation/);
+  assert.doesNotMatch(sentMessages[0], /Alert 6 from simulation/);
+  assert.match(sentMessages[0], /Plus 2 more active alert\(s\)\./);
+  assert.match(sentMessages[0], /Check the dashboard for details\./);
+});
+
+test("alert notifier rate limits batches", async () => {
+  const sentMessages = [];
+  let timerCallback = null;
+  let currentTime = 100000;
+  const client = {
+    isReady: () => true,
+    channels: {
+      fetch: async () => ({
+        isTextBased: () => true,
+        send: async (message) => {
+          sentMessages.push(message);
+        }
+      })
+    }
+  };
+  const notifier = createAlertNotifier({
+    client,
+    alertChannelId: "channel-1",
+    minBatchIntervalMs: 45000,
+    now: () => currentTime,
+    setTimer: (callback) => {
+      timerCallback = callback;
+      return "timer-1";
+    },
+    clearTimer: () => {}
+  });
+
+  await notifier.notifyNewAlerts([
+    {
+      id: "alert-1",
+      message: "First alert."
+    }
+  ]);
+
+  await notifier.notifyNewAlerts([
+    {
+      id: "alert-2",
+      message: "Second alert."
+    }
+  ]);
+
+  assert.equal(sentMessages.length, 1);
+  assert.equal(typeof timerCallback, "function");
+
+  currentTime += 45000;
+  timerCallback();
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+
+  assert.equal(sentMessages.length, 2);
+  assert.match(sentMessages[1], /Second alert\./);
+});
+
+test("alert batch formatter sanitizes mentions", () => {
+  const message = formatAlertBatchMessage([
+    {
+      id: "alert-1",
+      message: "Unsafe @everyone @here alert."
+    }
+  ]);
+
+  assert.doesNotMatch(message, /@everyone|@here/);
 });

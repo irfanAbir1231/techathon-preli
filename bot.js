@@ -6,6 +6,8 @@ const DISCORD_MESSAGE_LIMIT = 2000;
 const SAFE_MESSAGE_LIMIT = 1900;
 const GROQ_TIMEOUT_MS = 3500;
 const GROQ_MODEL = "llama-3.1-8b-instant";
+const ALERT_BATCH_INTERVAL_MS = 45 * 1000;
+const ALERT_BATCH_LIMIT = 5;
 
 const ROOM_DISPLAY_NAMES = ["Drawing Room", "Work Room 1", "Work Room 2"];
 
@@ -174,12 +176,14 @@ export const buildUsageFacts = (snapshot) => {
 
 export const formatHelpFallback = () =>
   [
-    "Office energy bot commands:",
-    "!status - overall office status",
-    "!room drawing - Drawing Room details",
-    "!room work1 - Work Room 1 details",
-    "!room work2 - Work Room 2 details",
-    "!usage - current power usage"
+    "⚡ Office Energy Bot",
+    "",
+    "Try one of these:",
+    "- `!status` - overall office status",
+    "- `!room drawing` - Drawing Room details",
+    "- `!room work1` - Work Room 1 details",
+    "- `!room work2` - Work Room 2 details",
+    "- `!usage` - current live power usage"
   ].join("\n");
 
 export const formatStatusFallback = (facts) => {
@@ -188,23 +192,27 @@ export const formatStatusFallback = (facts) => {
       room.activeDeviceCount === 0
         ? "all devices OFF"
         : `${room.activeDeviceCount}/${room.totalDeviceCount} devices ON`;
-    return `${room.name}: ${roomStatus}, using ${room.powerUsage}W.`;
+    return `- ${room.name}: ${roomStatus}, ${room.powerUsage}W`;
   });
 
   return [
-    "Office status right now:",
+    "🏢 Office status right now",
+    "",
     ...roomLines,
     "",
-    `Total: ${facts.activeDeviceCount}/${facts.totalDeviceCount} devices ON, ${facts.totalPowerUsage}W.`,
-    `Active alerts: ${facts.alertCount}.`
+    `⚡ Total: ${facts.activeDeviceCount}/${facts.totalDeviceCount} devices ON, ${facts.totalPowerUsage}W`,
+    `🚨 Active alerts: ${facts.alertCount}`
   ].join("\n");
 };
 
 export const formatInvalidRoomFallback = () =>
-  ["I couldn't find that room.", "Try: drawing, work1, or work2."].join("\n");
+  ["I couldn't find that room.", "Try: `drawing`, `work1`, or `work2`."].join("\n");
 
 const formatDeviceLines = (devices) =>
-  devices.map((device) => `${device.name}: ${device.status} - ${device.powerDraw}W`);
+  devices.map((device) => {
+    const statusIcon = device.status === "ON" ? "🟢" : "⚪";
+    return `- ${statusIcon} ${device.name}: ${device.status} (${device.powerDraw}W)`;
+  });
 
 export const formatRoomFallback = (facts) => {
   if (!facts.valid) {
@@ -214,33 +222,35 @@ export const formatRoomFallback = (facts) => {
   const alertLines =
     facts.alerts.length > 0
       ? facts.alerts.map((alert) => `- ${alert.message}`)
-      : ["None"];
+      : ["- None"];
 
   return [
-    `${facts.roomName}:`,
-    `Power: ${facts.powerUsage}W`,
-    `Devices ON: ${facts.activeDeviceCount}/${facts.totalDeviceCount}`,
+    `🏠 ${facts.roomName}`,
     "",
-    "Fans:",
+    `⚡ Power: ${facts.powerUsage}W`,
+    `🔌 Devices ON: ${facts.activeDeviceCount}/${facts.totalDeviceCount}`,
+    "",
+    "Fans",
     ...formatDeviceLines(facts.fans),
     "",
-    "Lights:",
+    "Lights",
     ...formatDeviceLines(facts.lights),
     "",
-    "Room alerts:",
+    "Room alerts",
     ...alertLines
   ].join("\n");
 };
 
 export const formatUsageFallback = (facts) =>
   [
-    "Current office usage:",
+    "⚡ Current office usage",
+    "",
     `Total live power: ${facts.totalPowerUsage}W`,
     "",
     ...facts.rooms.map((room) => `${room.name}: ${room.powerUsage}W`),
     "",
-    `Highest room right now: ${facts.highestRoom.name}.`,
-    `Active devices: ${facts.activeDeviceCount}/${facts.totalDeviceCount}.`
+    `Highest room right now: ${facts.highestRoom.name}`,
+    `Active devices: ${facts.activeDeviceCount}/${facts.totalDeviceCount}`
   ].join("\n");
 
 export const sanitizeDiscordMessage = (message) => {
@@ -387,8 +397,79 @@ const createReplyBuilder = ({ getSnapshot, groqClient }) => {
   };
 };
 
-export const createAlertNotifier = ({ client, alertChannelId }) => {
+export const formatAlertBatchMessage = (alerts, hiddenCount = 0) => {
+  const alertLines = alerts
+    .slice(0, ALERT_BATCH_LIMIT)
+    .map((alert) => `- ${alert.message}`);
+  const extraLine =
+    hiddenCount > 0 ? [`- Plus ${hiddenCount} more active alert(s).`] : [];
+
+  return sanitizeDiscordMessage(
+    [
+      "⚠️ Office alert update",
+      "",
+      ...alertLines,
+      ...extraLine,
+      "",
+      "Check the dashboard for details."
+    ].join("\n")
+  );
+};
+
+export const createAlertNotifier = ({
+  client,
+  alertChannelId,
+  minBatchIntervalMs = ALERT_BATCH_INTERVAL_MS,
+  setTimer = setTimeout,
+  clearTimer = clearTimeout,
+  now = () => Date.now()
+}) => {
   const notifiedAlertIds = new Set();
+  const pendingAlerts = [];
+  let lastBatchSentAt = 0;
+  let batchTimer = null;
+
+  const sendPendingBatch = async () => {
+    if (!alertChannelId || !client?.isReady?.() || pendingAlerts.length === 0) {
+      return;
+    }
+
+    const batchAlerts = pendingAlerts.splice(0, pendingAlerts.length);
+    const visibleAlerts = batchAlerts.slice(0, ALERT_BATCH_LIMIT);
+    const hiddenCount = Math.max(batchAlerts.length - visibleAlerts.length, 0);
+
+    try {
+      const channel = await client.channels.fetch(alertChannelId);
+      if (!channel?.isTextBased?.() || typeof channel.send !== "function") {
+        console.warn("[Discord] Alert channel is not sendable");
+        return;
+      }
+
+      await channel.send(formatAlertBatchMessage(visibleAlerts, hiddenCount));
+      lastBatchSentAt = now();
+    } catch (error) {
+      console.warn(`[Discord] Failed to send proactive alert batch: ${error.message}`);
+    }
+  };
+
+  const scheduleBatch = async () => {
+    if (batchTimer || pendingAlerts.length === 0) {
+      return;
+    }
+
+    const elapsedMs = now() - lastBatchSentAt;
+    const waitMs = Math.max(minBatchIntervalMs - elapsedMs, 0);
+
+    if (waitMs === 0) {
+      await sendPendingBatch();
+      return;
+    }
+
+    batchTimer = setTimer(() => {
+      batchTimer = null;
+      void sendPendingBatch();
+    }, waitMs);
+  };
 
   const notifyNewAlerts = async (alerts = []) => {
     if (!alertChannelId || !client?.isReady?.()) {
@@ -401,32 +482,22 @@ export const createAlertNotifier = ({ client, alertChannelId }) => {
       }
 
       notifiedAlertIds.add(alert.id);
+      pendingAlerts.push(alert);
+    }
 
-      try {
-        const channel = await client.channels.fetch(alertChannelId);
-        if (!channel?.isTextBased?.() || typeof channel.send !== "function") {
-          console.warn("[Discord] Alert channel is not sendable");
-          continue;
-        }
+    await scheduleBatch();
+  };
 
-        await channel.send(
-          sanitizeDiscordMessage(
-            [
-              "Office alert:",
-              alert.message,
-              "",
-              "Check the dashboard for details."
-            ].join("\n")
-          )
-        );
-      } catch (error) {
-        console.warn(`[Discord] Failed to send proactive alert: ${error.message}`);
-      }
+  const shutdown = () => {
+    if (batchTimer) {
+      clearTimer(batchTimer);
+      batchTimer = null;
     }
   };
 
   return {
-    notifyNewAlerts
+    notifyNewAlerts,
+    shutdown
   };
 };
 
@@ -507,6 +578,7 @@ export const startDiscordBot = async ({
     client,
     notifyNewAlerts: alertNotifier.notifyNewAlerts,
     shutdown: async () => {
+      alertNotifier.shutdown();
       client.destroy();
       console.log("[Discord] Client destroyed");
     }
