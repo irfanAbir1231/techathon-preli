@@ -27,7 +27,7 @@ const io = new Server(httpServer, {
   }
 });
 
-let discordClient = null;
+let discordBot = null;
 let isShuttingDown = false;
 
 app.use(cors({ origin: CORS_ORIGIN }));
@@ -35,6 +35,11 @@ app.use(express.json());
 
 const broadcastDashboardUpdate = (snapshot = getOfficeSnapshot()) => {
   io.emit("dashboard-update", snapshot);
+};
+
+const publishDashboardUpdate = (snapshot = getOfficeSnapshot()) => {
+  broadcastDashboardUpdate(snapshot);
+  void discordBot?.notifyNewAlerts(snapshot.alerts);
 };
 
 app.get("/api/status", (req, res) => {
@@ -80,7 +85,7 @@ app.post("/api/device/toggle", (req, res) => {
   runAlertDetection();
 
   const snapshot = getOfficeSnapshot();
-  broadcastDashboardUpdate(snapshot);
+  publishDashboardUpdate(snapshot);
 
   res.status(200).json({
     message: "Device toggled successfully",
@@ -123,9 +128,8 @@ const gracefulShutdown = async (signal) => {
 
   stopSimulation();
 
-  if (discordClient) {
-    discordClient.destroy();
-    console.log("[Discord] Client destroyed");
+  if (discordBot) {
+    await discordBot.shutdown();
   }
 
   await new Promise((resolve) => {
@@ -161,10 +165,13 @@ httpServer.on("error", (error) => {
 httpServer.listen(PORT, async () => {
   console.log(`[Server] Listening on port ${PORT}`);
 
-  startSimulation(broadcastDashboardUpdate);
-  startAlertEngine(broadcastDashboardUpdate);
+  startSimulation(publishDashboardUpdate);
+  startAlertEngine(publishDashboardUpdate);
 
-  discordClient = await startDiscordBot({
+  discordBot = await startDiscordBot({
+    token: process.env.DISCORD_TOKEN,
+    alertChannelId: process.env.DISCORD_ALERT_CHANNEL_ID,
+    groqApiKey: process.env.GROQ_API_KEY,
     getSnapshot: getOfficeSnapshot,
     getRoomState
   });
