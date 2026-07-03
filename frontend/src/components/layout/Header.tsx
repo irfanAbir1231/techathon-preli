@@ -17,8 +17,8 @@ export const Header = () => {
   return (
     <GlassCard className="app-header">
       <div className="header-copy">
-        <h1>{getGreeting()}, Office Energy Overview</h1>
-        <p>Monitor your office devices and live power usage.</p>
+        <h1>Office Energy Overview</h1>
+        <p>{getGreeting()} 👋 Monitor your office devices and live power usage.</p>
       </div>
       <div className="header-pills">
         <StatusBadge status={socketStatus} />

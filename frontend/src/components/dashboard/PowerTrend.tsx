@@ -21,17 +21,33 @@ export const PowerTrend = ({ trend }: { trend: TrendPoint[] }) => (
         <p className="muted">Waiting for live updates...</p>
       </div>
     ) : (
-      <ResponsiveContainer width="100%" height={220}>
-        <AreaChart data={trend} margin={{ top: 8, right: 10, bottom: 0, left: -18 }}>
+      <ResponsiveContainer width="100%" height={214}>
+        <AreaChart data={trend} margin={{ top: 10, right: 8, bottom: 2, left: 2 }}>
           <defs>
             <linearGradient id="powerFill" x1="0" x2="0" y1="0" y2="1">
               <stop offset="5%" stopColor="#5b8cff" stopOpacity={0.38} />
               <stop offset="95%" stopColor="#5b8cff" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
-          <XAxis dataKey="label" stroke="#718096" tickLine={false} axisLine={false} minTickGap={24} />
-          <YAxis stroke="#718096" tickLine={false} axisLine={false} unit=" W" />
+          <CartesianGrid stroke="rgba(255,255,255,0.045)" vertical={false} />
+          <XAxis
+            dataKey="label"
+            stroke="#7e8aa1"
+            tick={{ fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={34}
+          />
+          <YAxis
+            stroke="#7e8aa1"
+            tick={{ fontSize: 11 }}
+            tickCount={4}
+            tickLine={false}
+            axisLine={false}
+            width={42}
+            allowDecimals={false}
+            tickFormatter={(value) => `${value}W`}
+          />
           <Tooltip
             contentStyle={{
               background: "rgba(10, 20, 34, 0.96)",

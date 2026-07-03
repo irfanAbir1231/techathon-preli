@@ -23,6 +23,15 @@ const DEVICE_POSITIONS: Record<string, CSSProperties> = {
   WR2_L3: { left: "28%", top: "43%" }
 };
 
+const TOOLTIP_PLACEMENTS: Record<string, "left" | "right" | "top"> = {
+  DR_F1: "right",
+  DR_F2: "right",
+  DR_L3: "left",
+  WR2_F1: "left",
+  WR2_F2: "left",
+  WR2_L3: "right"
+};
+
 const roomFurniture = (room: RoomName) => {
   if (room === "Drawing Room") {
     return (
@@ -56,10 +65,15 @@ export const OfficeFloorOverview = ({
       <span className="badge">3 rooms · 15 devices</span>
     </div>
     <div className="floor-plan" aria-label="Interactive office floor plan">
-      {ROOM_NAMES.map((room) => {
+      {ROOM_NAMES.map((room, roomIndex) => {
         const roomDevices = getRoomDevices(snapshot.officeState, room);
         return (
-          <section className="floor-room" key={room} aria-label={room}>
+          <section
+            className="floor-room"
+            data-room-index={roomIndex}
+            key={room}
+            aria-label={room}
+          >
             {roomFurniture(room)}
             <div className="room-label">
               <strong>{room}</strong>
@@ -71,6 +85,7 @@ export const OfficeFloorOverview = ({
                   className="device-pos"
                   key={device.id}
                   style={DEVICE_POSITIONS[device.id]}
+                  data-tooltip={TOOLTIP_PLACEMENTS[device.id] ?? "top"}
                   data-device-number={getDeviceNumber(device)}
                 >
                   <DeviceControl
