@@ -266,81 +266,112 @@ export const sanitizeDiscordMessage = (message) => {
   return `${sanitized.slice(0, SAFE_MESSAGE_LIMIT - 3).trimEnd()}...`;
 };
 
-const getNumberTokens = (message) => message.match(/\d+(?:\.\d+)?/g) ?? [];
+const SYSTEM_PROMPT = `You are a smart, friendly office assistant. The boss just asked for an update. 
+You must answer their query accurately, warmly, and concisely using ONLY the provided live data.
+STRICT RULES:
+1. NEVER invent, guess, or hallucinate data. 
+2. If the backend says a device is OFF, you must say it is OFF.
+3. If no data is provided for a specific room or device, state that you do not have that information.
+4. Keep responses short and conversational.`;
 
-const preservesFacts = (fallbackMessage, candidateMessage) => {
-  const candidate = candidateMessage.toLowerCase();
-  if (candidate.includes("kwh") || candidate.includes("@everyone") || candidate.includes("@here")) {
-    return false;
-  }
-
-  for (const roomName of ROOM_DISPLAY_NAMES) {
-    if (
-      fallbackMessage.includes(roomName) &&
-      !candidateMessage.includes(roomName)
-    ) {
-      return false;
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "getOfficeStatus",
+      description: "Get the overall active status of all devices and active alerts across the entire office.",
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "getPowerUsage",
+      description: "Get the current live power consumption in watts for the office and individual rooms.",
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "getRoomDetails",
+      description: "Get detailed information about a specific room, including exact devices (fans/lights) that are on or off.",
+      parameters: {
+        type: "object",
+        properties: {
+          roomName: {
+            type: "string",
+            enum: ["drawing", "work1", "work2"],
+            description: "The name of the room to inspect."
+          }
+        },
+        required: ["roomName"]
+      }
     }
   }
+];
 
-  return getNumberTokens(fallbackMessage).every((number) =>
-    getNumberTokens(candidateMessage).includes(number)
-  );
-};
-
-const withTimeout = (promise, timeoutMs) =>
-  Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error("Groq request timed out"));
-      }, timeoutMs);
-    })
-  ]);
-
-export const humanizeWithGroq = async ({
-  fallbackMessage,
-  context,
-  groqClient
-}) => {
-  if (!groqClient) {
-    return fallbackMessage;
-  }
+const handleNaturalLanguageRoute = async (messageContent, snapshot, groqClient) => {
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "user", content: messageContent }
+  ];
 
   try {
-    const completion = await withTimeout(
+    const intentResponse = await withTimeout(
       groqClient.chat.completions.create({
         model: GROQ_MODEL,
-        temperature: 0.2,
-        max_tokens: 350,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Rewrite only the provided facts into a friendly Discord message. Do not add new facts. Do not remove important facts. Do not change numbers. Do not mention unsupported data. Do not mention daily kWh. Keep it concise. Use at most a few emojis. Do not include @everyone or @here."
-          },
-          {
-            role: "user",
-            content: `Context: ${context}\n\nFacts:\n${fallbackMessage}`
-          }
-        ]
+        messages,
+        tools: TOOLS,
+        tool_choice: "auto",
       }),
       GROQ_TIMEOUT_MS
     );
 
-    const candidate = sanitizeDiscordMessage(
-      completion?.choices?.[0]?.message?.content ?? ""
-    );
+    const responseMessage = intentResponse?.choices?.[0]?.message;
+    if (!responseMessage) return null;
 
-    if (!candidate || !preservesFacts(fallbackMessage, candidate)) {
-      console.warn("[Discord] Groq response rejected; using deterministic fallback");
-      return fallbackMessage;
+    if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      messages.push(responseMessage);
+
+      for (const toolCall of responseMessage.tool_calls) {
+        let functionResult = {};
+        
+        if (toolCall.function.name === "getOfficeStatus") {
+          functionResult = buildStatusFacts(snapshot);
+        } else if (toolCall.function.name === "getPowerUsage") {
+          functionResult = buildUsageFacts(snapshot);
+        } else if (toolCall.function.name === "getRoomDetails") {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            functionResult = buildRoomFacts(snapshot, args.roomName);
+          } catch (e) {
+            functionResult = { error: "Invalid room name provided." };
+          }
+        }
+
+        messages.push({
+          tool_call_id: toolCall.id,
+          role: "tool",
+          name: toolCall.function.name,
+          content: JSON.stringify(functionResult),
+        });
+      }
+
+      const finalResponse = await withTimeout(
+        groqClient.chat.completions.create({
+          model: GROQ_MODEL,
+          messages,
+          temperature: 0.2,
+        }),
+        GROQ_TIMEOUT_MS
+      );
+      
+      return finalResponse?.choices?.[0]?.message?.content;
     }
 
-    return candidate;
+    return responseMessage.content;
   } catch (error) {
-    console.warn(`[Discord] Groq polish unavailable: ${error.message}`);
-    return fallbackMessage;
+    console.warn(`[Discord] Groq chat unavailable: ${error.message}`);
+    return null;
   }
 };
 
@@ -350,51 +381,6 @@ const buildGroqClient = (apiKey) => {
   }
 
   return new Groq({ apiKey });
-};
-
-const createReplyBuilder = ({ getSnapshot, groqClient }) => {
-  const buildReply = async ({ fallbackMessage, context }) =>
-    sanitizeDiscordMessage(
-      await humanizeWithGroq({ fallbackMessage, context, groqClient })
-    );
-
-  return async (command) => {
-    const snapshot = getSnapshot();
-
-    if (command.name === "help") {
-      return sanitizeDiscordMessage(formatHelpFallback());
-    }
-
-    if (command.name === "status") {
-      const facts = buildStatusFacts(snapshot);
-      return buildReply({
-        fallbackMessage: formatStatusFallback(facts),
-        context: "Overall office status command"
-      });
-    }
-
-    if (command.name === "room") {
-      const facts = buildRoomFacts(snapshot, command.args);
-      const fallbackMessage = facts.valid
-        ? formatRoomFallback(facts)
-        : formatInvalidRoomFallback();
-
-      return buildReply({
-        fallbackMessage,
-        context: "Single room status command"
-      });
-    }
-
-    if (command.name === "usage") {
-      const facts = buildUsageFacts(snapshot);
-      return buildReply({
-        fallbackMessage: formatUsageFallback(facts),
-        context: "Current live power usage command"
-      });
-    }
-
-    return null;
-  };
 };
 
 export const formatAlertBatchMessage = (alerts, hiddenCount = 0) => {
@@ -534,7 +520,6 @@ export const startDiscordBot = async ({
   });
 
   const groqClient = buildGroqClient(groqApiKey);
-  const buildReply = createReplyBuilder({ getSnapshot, groqClient });
   const alertNotifier = createAlertNotifier({ client, alertChannelId });
 
   client.once(Events.ClientReady, (readyClient) => {
@@ -542,19 +527,67 @@ export const startDiscordBot = async ({
   });
 
   client.on(Events.MessageCreate, async (message) => {
-    if (message.author?.bot) {
-      return;
-    }
+    if (message.author?.bot) return;
 
-    const command = parseCommand(message.content);
-    if (!command) {
-      return;
-    }
+    const isMentioned = message.mentions.has(client.user);
+    const isCommand = message.content.trim().startsWith(COMMAND_PREFIX);
+
+    if (!isMentioned && !isCommand) return;
+
+    const cleanContent = message.content.replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '').trim();
+    const snapshot = getSnapshot();
+    let finalReply = "";
 
     try {
-      const reply = await buildReply(command);
-      if (reply) {
-        await message.reply(reply.slice(0, DISCORD_MESSAGE_LIMIT));
+      if (isCommand) {
+        // --- ROUTE A: Explicit Commands ---
+        const command = parseCommand(cleanContent);
+        if (!command) return;
+
+        if (command.name === "help") {
+          finalReply = formatHelpFallback();
+        } else {
+          let rawData = {};
+          
+          if (command.name === "status") rawData = buildStatusFacts(snapshot);
+          else if (command.name === "usage") rawData = buildUsageFacts(snapshot);
+          else if (command.name === "room") rawData = buildRoomFacts(snapshot, command.args);
+          else {
+            finalReply = formatHelpFallback();
+          }
+
+          if (!finalReply) {
+            if (groqClient) {
+              const completion = await withTimeout(
+                groqClient.chat.completions.create({
+                  model: GROQ_MODEL,
+                  temperature: 0.2,
+                  messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: `The boss ran a command. Here is the data to report: ${JSON.stringify(rawData)}` }
+                  ]
+                }),
+                GROQ_TIMEOUT_MS
+              );
+              finalReply = completion?.choices?.[0]?.message?.content;
+            } else {
+              if (command.name === "status") finalReply = formatStatusFallback(rawData);
+              else if (command.name === "usage") finalReply = formatUsageFallback(rawData);
+              else if (command.name === "room") finalReply = rawData.valid ? formatRoomFallback(rawData) : formatInvalidRoomFallback();
+            }
+          }
+        }
+      } else {
+        // --- ROUTE B: Natural Language / Intent Routing ---
+        if (groqClient) {
+          finalReply = await handleNaturalLanguageRoute(cleanContent || "Hello!", snapshot, groqClient);
+        } else {
+          finalReply = "I need a Groq API key to chat! Try using `!help` instead.";
+        }
+      }
+
+      if (finalReply) {
+        await message.reply(sanitizeDiscordMessage(finalReply).slice(0, DISCORD_MESSAGE_LIMIT));
       }
     } catch (error) {
       console.warn(`[Discord] Command failed: ${error.message}`);

@@ -11,6 +11,11 @@ export const RoomSummary = ({ snapshot }: { snapshot: OfficeSnapshot }) => {
         <h2 className="section-title">Room Summary</h2>
         <span className="badge">Total</span>
       </div>
+      <div className="room-summary-header">
+        <span>Room</span>
+        <span>Power</span>
+        <span>ON / Total</span>
+      </div>
       <div className="table-like">
         {ROOM_NAMES.map((room) => {
           const devices = getRoomDevices(snapshot.officeState, room);

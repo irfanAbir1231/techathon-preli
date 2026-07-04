@@ -17,4 +17,24 @@
   --sidebar-width: 232px;
   --radius-card: 22px;
   --radius-small: 14px;
+
+  /* KPI card accent colors */
+  --kpi-power: #5b8cff;
+  --kpi-power-bg: rgba(91, 140, 255, 0.1);
+  --kpi-power-glow: rgba(91, 140, 255, 0.22);
+  --kpi-devices: #63e6a5;
+  --kpi-devices-bg: rgba(99, 230, 165, 0.1);
+  --kpi-devices-glow: rgba(99, 230, 165, 0.18);
+  --kpi-rooms: #38bdf8;
+  --kpi-rooms-bg: rgba(56, 189, 248, 0.1);
+  --kpi-rooms-glow: rgba(56, 189, 248, 0.18);
+  --kpi-alerts: #ffbd59;
+  --kpi-alerts-bg: rgba(255, 189, 89, 0.1);
+  --kpi-alerts-glow: rgba(255, 189, 89, 0.18);
+
+  /* Semantic status text colors */
+  --text-live: #63e6a5;
+  --text-warning: #ffbd59;
+  --text-danger: #ff6b6b;
+  --text-info: #5b8cff;
 }

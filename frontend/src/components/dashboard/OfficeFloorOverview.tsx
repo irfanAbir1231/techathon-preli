@@ -100,5 +100,20 @@ export const OfficeFloorOverview = ({
         );
       })}
     </div>
+    <div className="floor-legend" aria-label="Device legend">
+      <span className="floor-legend-item">
+        <span className="floor-legend-dot fan" />
+        Fan ON
+      </span>
+      <span className="floor-legend-item">
+        <span className="floor-legend-dot light" />
+        Light ON
+      </span>
+      <span className="floor-legend-item">
+        <span className="floor-legend-dot off" />
+        Device OFF
+      </span>
+    </div>
   </GlassCard>
 );
+

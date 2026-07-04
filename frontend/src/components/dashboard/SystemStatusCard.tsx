@@ -41,11 +41,15 @@ export const SystemStatusCard = ({
       <div className="table-like">
         <div className="row">
           <span>Backend</span>
-          <strong>{hasSnapshot ? "Connected" : "Unavailable"}</strong>
+          <strong className={hasSnapshot ? "text-live" : "text-danger"}>
+            {hasSnapshot ? "Connected" : "Unavailable"}
+          </strong>
         </div>
         <div className="row">
           <span>Live updates</span>
-          <strong>{receivingLiveUpdates ? "Active" : socketStatus}</strong>
+          <strong className={receivingLiveUpdates ? "text-live" : "text-warning"}>
+            {receivingLiveUpdates ? "Active" : socketStatus}
+          </strong>
         </div>
         <div className="row">
           <span>Last event</span>
@@ -58,7 +62,9 @@ export const SystemStatusCard = ({
               <span
                 className={`status-dot ${simulation?.isRunning ? "active" : "warning"}`}
               />
-              {simulationLabel}
+              <span className={simulation?.isRunning ? "text-live" : "text-warning"}>
+                {simulationLabel}
+              </span>
             </strong>
           </div>
           <div className="simulation-meta">
