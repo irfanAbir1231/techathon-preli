@@ -117,8 +117,16 @@ export const DevicesPage = () => {
               <td data-label="Device">{getDeviceDisplayName(device)}</td>
               <td data-label="Device ID">{device.id}</td>
               <td data-label="Room">{device.room}</td>
-              <td data-label="Type">{device.type}</td>
-              <td data-label="Status">{device.status}</td>
+              <td data-label="Type">
+                <span className={`type-badge type-${device.type}`}>
+                  {device.type}
+                </span>
+              </td>
+              <td data-label="Status">
+                <span className={`device-status-badge status-${device.status.toLowerCase()}`}>
+                  {device.status}
+                </span>
+              </td>
               <td data-label="Power draw">{device.powerDraw} W</td>
               <td data-label="Last changed">
                 Changed {formatRelativeTime(device.lastChanged)}

@@ -18,5 +18,21 @@ export const deriveAlertTarget = (alert: Alert): RoomName | string => {
   }
 
   const deviceMatch = alert.message.match(/\b(?:DR|WR1|WR2)_[FL]\d\b/);
-  return deviceMatch?.[0] ?? "Office";
+  if (!deviceMatch) {
+    return "";
+  }
+
+  if (deviceMatch[0].startsWith("DR_")) {
+    return "Drawing Room";
+  }
+
+  if (deviceMatch[0].startsWith("WR1_")) {
+    return "Work Room 1";
+  }
+
+  if (deviceMatch[0].startsWith("WR2_")) {
+    return "Work Room 2";
+  }
+
+  return deviceMatch[0];
 };

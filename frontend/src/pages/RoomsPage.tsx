@@ -49,7 +49,7 @@ export const RoomsPage = () => {
                 ))}
               </div>
               <div style={{ marginTop: 14 }}>
-                <ActiveAlertsPanel alerts={alerts} />
+                <ActiveAlertsPanel alerts={alerts} limit={3} compact />
               </div>
             </article>
           );

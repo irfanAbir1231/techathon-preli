@@ -1,21 +1,25 @@
 import { AlertTriangle } from "lucide-react";
 import type { Alert } from "../../types/office";
-import { getAlertTone } from "../../utils/alertUtils";
+import { deriveAlertTarget, getAlertTone } from "../../utils/alertUtils";
 import { formatDateTime } from "../../utils/dateUtils";
 import { GlassCard } from "../common/GlassCard";
 import { EmptyState } from "../feedback/EmptyState";
 
 export const ActiveAlertsPanel = ({
   alerts,
-  limit
+  limit,
+  compact = false,
+  showTarget = false
 }: {
   alerts: Alert[];
   limit?: number;
+  compact?: boolean;
+  showTarget?: boolean;
 }) => {
   const visibleAlerts = typeof limit === "number" ? alerts.slice(0, limit) : alerts;
 
   return (
-    <GlassCard className="panel-card">
+    <GlassCard className={`panel-card alerts-panel ${compact ? "alerts-panel-compact" : ""}`}>
       <div className="section-heading">
         <h2 className="section-title">Active Alerts</h2>
         {limit && alerts.length > limit ? <span className="badge">+{alerts.length - limit} more</span> : null}
@@ -25,15 +29,20 @@ export const ActiveAlertsPanel = ({
       ) : (
         <div className="alert-list">
           {visibleAlerts.map((alert) => (
-            <article className="alert-item" key={alert.id}>
+            <article className={`alert-item alert-${getAlertTone(alert.type)}`} key={alert.id}>
               <span className="alert-icon">
-                <AlertTriangle size={18} />
+                <AlertTriangle size={compact ? 15 : 18} />
               </span>
               <div>
                 <strong>{alert.message}</strong>
                 <p className="muted">
                   {alert.type} · {getAlertTone(alert.type)} · {formatDateTime(alert.timestamp)}
                 </p>
+                {showTarget && deriveAlertTarget(alert) ? (
+                  <p className="muted alert-target">
+                    Target: {deriveAlertTarget(alert)}
+                  </p>
+                ) : null}
               </div>
             </article>
           ))}

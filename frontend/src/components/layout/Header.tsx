@@ -1,7 +1,7 @@
 import { Bell, Clock, Radio } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useOfficeDashboard } from "../../hooks/useOfficeDashboard";
-import { formatClock, getGreeting } from "../../utils/dateUtils";
+import { formatClock } from "../../utils/dateUtils";
 import { GlassCard } from "../common/GlassCard";
 import { StatusBadge } from "../common/StatusBadge";
 
@@ -17,8 +17,8 @@ export const Header = () => {
   return (
     <GlassCard className="app-header">
       <div className="header-copy">
-        <h1>Office Energy Overview</h1>
-        <p>{getGreeting()} 👋 Monitor your office devices and live power usage.</p>
+        <h1>Office Energy Dashboard</h1>
+        <p>Real-time device monitoring and power insights.</p>
       </div>
       <div className="header-pills">
         <StatusBadge status={socketStatus} />

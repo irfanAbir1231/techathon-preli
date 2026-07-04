@@ -16,10 +16,19 @@ export const LiveDeviceStatus = ({
         <h2 className="section-title">Live Device Status</h2>
         <span className="badge">Total</span>
       </div>
-      <div className="row" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-        <span>Fans<br /><span className="muted">{counts.fans} total · {counts.fansOn} ON</span></span>
-        <span>Lights<br /><span className="muted">{counts.lights} total · {counts.lightsOn} ON</span></span>
-        <span>Devices<br /><span className="muted">{counts.total} total · {counts.on} ON</span></span>
+      <div className="live-stat-grid">
+        <div className="live-stat-pill">
+          <span>Fans</span>
+          <strong>{counts.fansOn} / {counts.fans} ON</strong>
+        </div>
+        <div className="live-stat-pill">
+          <span>Lights</span>
+          <strong>{counts.lightsOn} / {counts.lights} ON</strong>
+        </div>
+        <div className="live-stat-pill">
+          <span>Devices</span>
+          <strong>{counts.on} / {counts.total} ON</strong>
+        </div>
       </div>
       <div className="device-rows" style={{ marginTop: 12 }}>
         {ROOM_NAMES.map((room) => {
