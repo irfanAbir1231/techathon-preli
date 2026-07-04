@@ -222,8 +222,8 @@ a {
 }
 
 .main-area {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 18px;
   max-width: 1600px;
   width: 100%;
@@ -232,7 +232,24 @@ a {
   overflow-y: auto;
 }
 
-.app-header,
+.main-area > * {
+  flex-shrink: 0;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 24px;
+  margin: -18px -18px 0 -18px;
+  background: #171717;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: sticky;
+  top: -18px;
+  z-index: 10;
+}
+
 .footer-bar {
   display: flex;
   align-items: center;
@@ -700,7 +717,7 @@ a {
 
 .panel-card {
   padding: 20px;
-  min-height: 100%;
+  flex-shrink: 0;
 }
 
 .live-stat-grid {
@@ -1417,7 +1434,6 @@ a {
 
 .report-device-card .report-table-scroll {
   overflow-y: auto;
-  flex: 1 1 auto;
 }
 
 .report-total-row {

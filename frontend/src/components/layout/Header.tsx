@@ -2,7 +2,6 @@ import { Bell, Clock, Radio, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { useEffect, useState } from "react";
 import { useOfficeDashboard } from "../../hooks/useOfficeDashboard";
 import { formatClock } from "../../utils/dateUtils";
-import { GlassCard } from "../common/GlassCard";
 import { StatusBadge } from "../common/StatusBadge";
 
 interface HeaderProps {
@@ -20,7 +19,7 @@ export const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
   }, []);
 
   return (
-    <GlassCard className="app-header">
+    <header className="app-header">
       <div className="header-copy" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         {!isSidebarOpen && onToggleSidebar && (
           <button 
@@ -64,6 +63,6 @@ export const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
           Console
         </span>
       </div>
-    </GlassCard>
+    </header>
   );
 };
