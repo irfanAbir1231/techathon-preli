@@ -280,6 +280,7 @@ const TOOLS = [
     function: {
       name: "getOfficeStatus",
       description: "Get the overall active status of all devices and active alerts across the entire office.",
+      parameters: { type: "object", properties: {} }
     }
   },
   {
@@ -287,6 +288,7 @@ const TOOLS = [
     function: {
       name: "getPowerUsage",
       description: "Get the current live power consumption in watts for the office and individual rooms.",
+      parameters: { type: "object", properties: {} }
     }
   },
   {
@@ -588,6 +590,9 @@ export const startDiscordBot = async ({
         // --- ROUTE B: Natural Language / Intent Routing ---
         if (groqClient) {
           finalReply = await handleNaturalLanguageRoute(cleanContent || "Hello!", snapshot, groqClient);
+          if (!finalReply) {
+            finalReply = "I'm having a little trouble connecting to my AI brain right now. Please try a direct command like `!status`.";
+          }
         } else {
           finalReply = "I need a Groq API key to chat! Try using `!help` instead.";
         }
