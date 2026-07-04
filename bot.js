@@ -9,6 +9,16 @@ const GROQ_MODEL = "llama-3.1-8b-instant";
 const ALERT_BATCH_INTERVAL_MS = 45 * 1000;
 const ALERT_BATCH_LIMIT = 5;
 
+const withTimeout = (promise, timeoutMs) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Groq request timed out"));
+      }, timeoutMs);
+    })
+  ]);
+
 const ROOM_DISPLAY_NAMES = ["Drawing Room", "Work Room 1", "Work Room 2"];
 
 const ROOM_ALIASES = new Map([
