@@ -558,19 +558,25 @@ export const startDiscordBot = async ({
 
           if (!finalReply) {
             if (groqClient) {
-              const completion = await withTimeout(
-                groqClient.chat.completions.create({
-                  model: GROQ_MODEL,
-                  temperature: 0.2,
-                  messages: [
-                    { role: "system", content: SYSTEM_PROMPT },
-                    { role: "user", content: `The boss ran a command. Here is the data to report: ${JSON.stringify(rawData)}` }
-                  ]
-                }),
-                GROQ_TIMEOUT_MS
-              );
-              finalReply = completion?.choices?.[0]?.message?.content;
-            } else {
+              try {
+                const completion = await withTimeout(
+                  groqClient.chat.completions.create({
+                    model: GROQ_MODEL,
+                    temperature: 0.2,
+                    messages: [
+                      { role: "system", content: SYSTEM_PROMPT },
+                      { role: "user", content: `The boss ran a command. Here is the data to report: ${JSON.stringify(rawData)}` }
+                    ]
+                  }),
+                  GROQ_TIMEOUT_MS
+                );
+                finalReply = completion?.choices?.[0]?.message?.content;
+              } catch (e) {
+                console.warn(`[Discord] Groq formatting failed, using fallback: ${e.message}`);
+              }
+            }
+            
+            if (!finalReply) {
               if (command.name === "status") finalReply = formatStatusFallback(rawData);
               else if (command.name === "usage") finalReply = formatUsageFallback(rawData);
               else if (command.name === "room") finalReply = rawData.valid ? formatRoomFallback(rawData) : formatInvalidRoomFallback();
