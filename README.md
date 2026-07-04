@@ -32,7 +32,9 @@ The Node.js backend is the single source of truth for device state. The frontend
 |---|---|
 | Frontend Dashboard | https://techathon-preli.vercel.app |
 | Backend API | https://techathon-preli-backend.onrender.com/api/status |
-| Wokwi ESP32 Simulation | https://wokwi.com/projects/468607918772131841 |
+| Wokwi ESP32 1: Drawing Room + Work Room 1 lights | https://wokwi.com/projects/468623413487903745 |
+| Wokwi ESP32 2: Work Room 1 fans + Work Room 2 | https://wokwi.com/projects/468625223899644929 |
+| Demo Video / Drive Folder | https://drive.google.com/drive/folders/1T-_1PHwZAHxMWa-s-FVs2VFn1AlGv8Vh?usp=sharing |
 | GitHub Repository | https://github.com/irfanAbir1231/techathon-preli.git |
 
 ## Key Features
@@ -57,6 +59,10 @@ The frontend power trend is a live browser-session trend only. The backend does 
 ## System Architecture
 
 The backend owns the final device state. The frontend does not own or calculate the source-of-truth state, and the Discord bot reads the same state as the dashboard.
+
+System diagram:
+
+![Office Energy Dashboard system architecture](diagram.png)
 
 Text flow:
 
@@ -87,7 +93,7 @@ Important architecture notes:
 - Frontend listens to the Socket.IO event `dashboard-update`.
 - Discord commands read the same backend/simulation state.
 - Wokwi is optional and communicates with the backend through REST.
-- Final architecture diagrams should be stored as an image or PDF in `docs/` if added later.
+- The included `diagram.png` shows the current integrated system flow.
 
 ## Tech Stack
 
@@ -284,11 +290,12 @@ If `GROQ_API_KEY` is configured, Groq may polish response wording. If Groq is mi
 
 ## Wokwi / ESP32 Simulation Setup and Usage
 
-Wokwi project:
+Wokwi projects:
 
-```text
-https://wokwi.com/projects/468607918772131841
-```
+| ESP32 Board | Coverage | Link |
+|---|---|---|
+| ESP32 1 | Drawing Room + Work Room 1 lights | https://wokwi.com/projects/468623413487903745 |
+| ESP32 2 | Work Room 1 fans + Work Room 2 | https://wokwi.com/projects/468625223899644929 |
 
 The Wokwi simulation is an optional hardware simulation layer. It demonstrates how an ESP32-based office device system could connect to the same backend.
 
@@ -326,8 +333,8 @@ Example:
 ### Recommended Usage Steps
 
 1. Open the deployed dashboard.
-2. Open the Wokwi project.
-3. Start the Wokwi simulation.
+2. Open one or both Wokwi projects.
+3. Start the Wokwi simulation for the board you want to demo.
 4. Wait for Serial Monitor to show backend connected or synced from backend.
 5. Toggle a device from the dashboard.
 6. Wait a few seconds and observe the corresponding Wokwi LED change.
@@ -351,7 +358,10 @@ Troubleshooting Wokwi:
 - The simulation uses HTTPS to Render, so small delays are normal.
 - DIP switches are toggle inputs, not absolute ON/OFF controls.
 
-This repository does not currently include Wokwi source files or an ESP board mapping table. If the Wokwi project uses multiple `ESP_BOARD_NUMBER` values, document the exact device mapping from the Wokwi sketch in a future `docs/` file.
+This repository does not currently include Wokwi source files. The two linked Wokwi projects are split by board responsibility:
+
+- ESP32 1 handles Drawing Room devices and Work Room 1 lights.
+- ESP32 2 handles Work Room 1 fans and Work Room 2 devices.
 
 ## API Reference
 
@@ -580,6 +590,12 @@ Suggested 3-minute demo:
    - DIP switch movement changes backend/dashboard.
 9. Explain architecture:
    - Wokwi / simulator -> backend -> dashboard + Discord.
+
+Demo video / shared drive folder:
+
+```text
+https://drive.google.com/drive/folders/1T-_1PHwZAHxMWa-s-FVs2VFn1AlGv8Vh?usp=sharing
+```
 
 ## Security Notes
 
