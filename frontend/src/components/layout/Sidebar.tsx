@@ -7,11 +7,11 @@ import {
   MonitorCog,
   Settings,
   ShieldCheck,
-  SlidersHorizontal
+  SlidersHorizontal,
+  PanelLeftClose
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useOfficeDashboard } from "../../hooks/useOfficeDashboard";
-import { GlassCard } from "../common/GlassCard";
 
 const navItems = [
   { to: "/", label: "Overview", icon: Home },
@@ -23,21 +23,33 @@ const navItems = [
   { to: "/settings", label: "Settings", icon: Settings }
 ];
 
-export const Sidebar = () => {
+export const Sidebar = ({ isOpen, onToggle }: { isOpen?: boolean; onToggle?: () => void }) => {
   const { snapshot } = useOfficeDashboard();
   const alertCount = snapshot?.alerts.length ?? 0;
 
   return (
-    <GlassCard className="sidebar">
-      <div className="brand">
-        <div className="brand-mark" aria-hidden="true">
-          <ShieldCheck />
+    <aside className={`sidebar ${isOpen === false ? 'closed' : ''}`}>
+      <div className="brand" style={{ justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="brand-mark" aria-hidden="true">
+            <ShieldCheck />
+          </div>
+          <div>
+            <strong>Office Energy</strong>
+            <br />
+            <span>Dashboard</span>
+          </div>
         </div>
-        <div>
-          <strong>Office Energy</strong>
-          <br />
-          <span>Dashboard</span>
-        </div>
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            className="mini-panel"
+            style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Close sidebar"
+          >
+            <PanelLeftClose size={20} color="var(--text-secondary)" />
+          </button>
+        )}
       </div>
 
       <nav className="nav-list" aria-label="Primary navigation">
@@ -76,12 +88,10 @@ export const Sidebar = () => {
             <span className="avatar">OE</span>
             <div>
               <strong>Operations Console</strong>
-              <br />
-              <span className="muted">Frontend only</span>
             </div>
           </div>
         </div>
       </div>
-    </GlassCard>
+    </aside>
   );
 };

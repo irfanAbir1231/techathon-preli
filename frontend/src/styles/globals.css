@@ -50,9 +50,13 @@ a {
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  min-height: 100vh;
-  padding: 18px;
-  gap: 18px;
+  height: 100vh;
+  overflow: hidden;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.app-shell.sidebar-closed {
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 
 .glass-card {
@@ -69,15 +73,22 @@ a {
 }
 
 .sidebar {
-  position: sticky;
-  top: 0;
   display: flex;
   flex-direction: column;
   height: 100vh;
   max-height: 100vh;
   width: var(--sidebar-width);
   padding: 18px 12px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #171717;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.sidebar.closed {
+  transform: translateX(-100%);
+  opacity: 0;
 }
 
 .brand {
@@ -127,17 +138,12 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 46px;
-  padding: 0 13px;
-  color: var(--text-secondary);
-  border: 1px solid transparent;
-  border-radius: 14px;
+  min-height: 44px;
+  padding: 0 12px;
+  color: #ececf1;
+  border-radius: 8px;
   font-size: 0.93rem;
-  transition:
-    color 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .nav-link-inner {
@@ -153,20 +159,14 @@ a {
 }
 
 .nav-link.active {
-  color: var(--text-primary);
-  background:
-    linear-gradient(90deg, rgba(91, 140, 255, 0.22), rgba(99, 230, 165, 0.055)),
-    rgba(255, 255, 255, 0.035);
-  border-color: rgba(91, 140, 255, 0.32);
-  box-shadow:
-    inset 3px 0 0 rgba(99, 230, 165, 0.82),
-    inset 0 0 18px rgba(91, 140, 255, 0.12);
+  color: #fff;
+  background: #202123;
+  font-weight: 500;
 }
 
 .nav-link:not(.active):hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  background: #2a2b32;
 }
 
 .count-badge,
@@ -192,10 +192,15 @@ a {
 }
 
 .mini-panel {
-  padding: 14px;
-  border: 1px solid var(--border-glass);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+  border-radius: 8px;
+  background: transparent;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.mini-panel:hover {
+  background: #2a2b32;
 }
 
 .mini-panel-row {
@@ -222,7 +227,9 @@ a {
   gap: 18px;
   max-width: 1600px;
   width: 100%;
+  padding: 18px;
   margin: 0 auto;
+  overflow-y: auto;
 }
 
 .app-header,
