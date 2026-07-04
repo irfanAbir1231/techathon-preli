@@ -4,7 +4,7 @@ import Groq from "groq-sdk";
 const COMMAND_PREFIX = "!";
 const DISCORD_MESSAGE_LIMIT = 2000;
 const SAFE_MESSAGE_LIMIT = 1900;
-const GROQ_TIMEOUT_MS = 3500;
+const GROQ_TIMEOUT_MS = 10000;
 const GROQ_MODEL = "llama-3.1-8b-instant";
 const ALERT_BATCH_INTERVAL_MS = 45 * 1000;
 const ALERT_BATCH_LIMIT = 5;
@@ -532,9 +532,10 @@ export const startDiscordBot = async ({
     const isMentioned = message.mentions.has(client.user);
     const isCommand = message.content.trim().startsWith(COMMAND_PREFIX);
 
-    if (!isMentioned && !isCommand) return;
-
     const cleanContent = message.content.replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '').trim();
+    // If it's not a command and not a mention, and they just posted a file or something empty, ignore.
+    if (!cleanContent && !isCommand) return;
+
     const snapshot = getSnapshot();
     let finalReply = "";
 
