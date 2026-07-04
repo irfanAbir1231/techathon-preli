@@ -44,9 +44,12 @@ const OFFICE_START_HOUR = 9;
 const OFFICE_END_HOUR = 17;
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const SIMULATION_INTERVAL_MS = 15 * 1000;
 
 let simulationInterval = null;
 let alertInterval = null;
+let simulationUpdateHandler = null;
+let lastSimulationTick = null;
 
 export const officeState = DEVICE_CONFIG.map(([id, room, type]) => ({
   id,
@@ -99,11 +102,18 @@ export const getRoomPowerUsage = () =>
     return usage;
   }, {});
 
+export const getSimulationStatus = () => ({
+  isRunning: Boolean(simulationInterval),
+  intervalMs: SIMULATION_INTERVAL_MS,
+  lastTick: lastSimulationTick
+});
+
 export const getOfficeSnapshot = () => ({
   officeState: officeState.map(cloneDevice),
   totalPowerUsage: getTotalPowerUsage(),
   roomPowerUsage: getRoomPowerUsage(),
   alerts: Array.from(activeAlertsByKey.values()).map(cloneAlert),
+  simulation: getSimulationStatus(),
   updatedAt: new Date().toISOString()
 });
 
@@ -155,6 +165,27 @@ const getRandomDeviceIndexes = () => {
   }
 
   return Array.from(selectedIndexes);
+};
+
+const runSimulationTick = () => {
+  lastSimulationTick = new Date().toISOString();
+  console.log("[Simulation] Tick started");
+
+  const selectedIndexes = getRandomDeviceIndexes();
+  for (const index of selectedIndexes) {
+    const updatedDevice = toggleDeviceById(officeState[index].id);
+    console.log(
+      `[Simulation] Toggled ${updatedDevice.id} -> ${updatedDevice.status}`
+    );
+  }
+
+  runAlertDetection();
+  const snapshot = getOfficeSnapshot();
+  console.log(`[Simulation] Total power: ${snapshot.totalPowerUsage}W`);
+
+  if (typeof simulationUpdateHandler === "function") {
+    simulationUpdateHandler(snapshot);
+  }
 };
 
 const buildExpectedAlerts = () => {
@@ -244,32 +275,49 @@ export const runAlertDetection = () => {
 };
 
 export const startSimulation = (onUpdate) => {
+  if (typeof onUpdate === "function") {
+    simulationUpdateHandler = onUpdate;
+  }
+
   if (simulationInterval) {
     console.log("[Simulation] Simulation loop already running");
     return;
   }
 
-  simulationInterval = setInterval(() => {
-    console.log("[Simulation] Tick started");
-
-    const selectedIndexes = getRandomDeviceIndexes();
-    for (const index of selectedIndexes) {
-      const updatedDevice = toggleDeviceById(officeState[index].id);
-      console.log(
-        `[Simulation] Toggled ${updatedDevice.id} -> ${updatedDevice.status}`
-      );
-    }
-
-    runAlertDetection();
-    const snapshot = getOfficeSnapshot();
-    console.log(`[Simulation] Total power: ${snapshot.totalPowerUsage}W`);
-
-    if (typeof onUpdate === "function") {
-      onUpdate(snapshot);
-    }
-  }, 15 * 1000);
+  simulationInterval = setInterval(runSimulationTick, SIMULATION_INTERVAL_MS);
 
   console.log("[Simulation] Simulation loop started");
+};
+
+export const pauseSimulation = () => {
+  if (simulationInterval) {
+    clearInterval(simulationInterval);
+    simulationInterval = null;
+    console.log("[Simulation] Automatic simulation paused");
+  }
+
+  return getSimulationStatus();
+};
+
+export const resumeSimulation = (onUpdate) => {
+  if (typeof onUpdate === "function") {
+    simulationUpdateHandler = onUpdate;
+  }
+
+  if (!simulationInterval) {
+    simulationInterval = setInterval(runSimulationTick, SIMULATION_INTERVAL_MS);
+    console.log("[Simulation] Automatic simulation resumed");
+  }
+
+  return getSimulationStatus();
+};
+
+export const setSimulationRunning = (isRunning) => {
+  if (isRunning) {
+    return resumeSimulation();
+  }
+
+  return pauseSimulation();
 };
 
 export const startAlertEngine = (onUpdate) => {

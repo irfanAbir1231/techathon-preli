@@ -20,11 +20,18 @@ export interface Alert {
 
 export type RoomPowerUsage = Record<RoomName, number>;
 
+export interface SimulationStatus {
+  isRunning: boolean;
+  intervalMs: number;
+  lastTick: string | null;
+}
+
 export interface OfficeSnapshot {
   officeState: Device[];
   totalPowerUsage: number;
   roomPowerUsage: RoomPowerUsage;
   alerts: Alert[];
+  simulation?: SimulationStatus;
   updatedAt: string;
 }
 

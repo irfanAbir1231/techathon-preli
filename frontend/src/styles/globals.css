@@ -953,6 +953,65 @@ a {
   border: 1px solid rgba(91, 140, 255, 0.35);
   border-radius: 11px;
   background: rgba(91, 140, 255, 0.16);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.text-button:not(:disabled):hover,
+.text-button:not(:disabled):focus-visible {
+  border-color: rgba(91, 140, 255, 0.52);
+  background: rgba(91, 140, 255, 0.22);
+  box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.text-button:disabled {
+  opacity: 0.58;
+}
+
+.simulation-control {
+  display: grid;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.simulation-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simulation-status-row span {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.simulation-status-row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 620;
+}
+
+.simulation-meta {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.simulation-toggle {
+  width: 100%;
 }
 
 .toast {

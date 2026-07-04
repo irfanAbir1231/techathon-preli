@@ -1,4 +1,4 @@
-import type { OfficeSnapshot } from "../types/office";
+import type { OfficeSnapshot, SimulationStatus } from "../types/office";
 
 interface ApiErrorBody {
   error?: string;
@@ -80,3 +80,27 @@ export const toggleDevice = (id: string, signal?: AbortSignal) =>
     },
     signal
   );
+
+export const getSimulationStatus = (signal?: AbortSignal) =>
+  requestJson<SimulationStatus>("/api/simulation", {}, signal);
+
+export const pauseSimulation = (signal?: AbortSignal) =>
+  requestJson<{
+    message: string;
+    simulation: SimulationStatus;
+    snapshot: OfficeSnapshot;
+  }>("/api/simulation/pause", { method: "POST" }, signal);
+
+export const resumeSimulation = (signal?: AbortSignal) =>
+  requestJson<{
+    message: string;
+    simulation: SimulationStatus;
+    snapshot: OfficeSnapshot;
+  }>("/api/simulation/resume", { method: "POST" }, signal);
+
+export const toggleSimulation = (signal?: AbortSignal) =>
+  requestJson<{
+    message: string;
+    simulation: SimulationStatus;
+    snapshot: OfficeSnapshot;
+  }>("/api/simulation/toggle", { method: "POST" }, signal);

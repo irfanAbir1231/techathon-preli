@@ -7,7 +7,12 @@ import {
   useState,
   type ReactNode
 } from "react";
-import { fetchOfficeStatus, getFrontendConfig, toggleDevice } from "../api/officeApi";
+import {
+  fetchOfficeStatus,
+  getFrontendConfig,
+  toggleDevice,
+  toggleSimulation
+} from "../api/officeApi";
 import { createOfficeSocket } from "../socket/officeSocket";
 import type { OfficeSnapshot, SocketStatus, TrendPoint } from "../types/office";
 import { formatClock } from "../utils/dateUtils";
@@ -26,9 +31,11 @@ interface DashboardContextValue {
   lastReceivedAt: Date | null;
   trend: TrendPoint[];
   pendingDeviceIds: Set<string>;
+  pendingSimulationChange: boolean;
   toast: ToastMessage | null;
   retry: () => void;
   toggleDeviceById: (id: string) => Promise<void>;
+  toggleSimulationRunning: () => Promise<void>;
   dismissToast: () => void;
 }
 
@@ -66,6 +73,7 @@ export const OfficeDashboardProvider = ({ children }: { children: ReactNode }) =
   const [lastReceivedAt, setLastReceivedAt] = useState<Date | null>(null);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [pendingDeviceIds, setPendingDeviceIds] = useState<Set<string>>(new Set());
+  const [pendingSimulationChange, setPendingSimulationChange] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -206,6 +214,25 @@ export const OfficeDashboardProvider = ({ children }: { children: ReactNode }) =
     [acceptSnapshot]
   );
 
+  const toggleSimulationRunning = useCallback(async () => {
+    setPendingSimulationChange(true);
+
+    try {
+      const response = await toggleSimulation();
+      acceptSnapshot(response.snapshot);
+    } catch (simulationError) {
+      setToast({
+        id: `simulation-${Date.now()}`,
+        message:
+          simulationError instanceof Error
+            ? simulationError.message
+            : "Unable to update simulation status."
+      });
+    } finally {
+      setPendingSimulationChange(false);
+    }
+  }, [acceptSnapshot]);
+
   const value = useMemo(
     () => ({
       snapshot,
@@ -216,12 +243,14 @@ export const OfficeDashboardProvider = ({ children }: { children: ReactNode }) =
       lastReceivedAt,
       trend,
       pendingDeviceIds,
+      pendingSimulationChange,
       toast,
       retry: () => {
         setLoading(true);
         setReloadKey((key) => key + 1);
       },
       toggleDeviceById,
+      toggleSimulationRunning,
       dismissToast: () => setToast(null)
     }),
     [
@@ -233,8 +262,10 @@ export const OfficeDashboardProvider = ({ children }: { children: ReactNode }) =
       lastReceivedAt,
       trend,
       pendingDeviceIds,
+      pendingSimulationChange,
       toast,
-      toggleDeviceById
+      toggleDeviceById,
+      toggleSimulationRunning
     ]
   );
 

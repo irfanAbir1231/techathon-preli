@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchOfficeStatus, toggleDevice } from "./officeApi";
+import { fetchOfficeStatus, toggleDevice, toggleSimulation } from "./officeApi";
 import { sampleSnapshot } from "../test/sampleData";
 
 describe("officeApi", () => {
@@ -41,5 +41,33 @@ describe("officeApi", () => {
     );
 
     await expect(fetchOfficeStatus()).rejects.toThrow("Device not found");
+  });
+
+  it("sends simulation toggle requests", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "https://backend.example");
+    vi.stubEnv("VITE_SOCKET_URL", "https://backend.example");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          message: "Simulation paused",
+          simulation: {
+            isRunning: false,
+            intervalMs: 15000,
+            lastTick: null
+          },
+          snapshot: sampleSnapshot
+        })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await toggleSimulation();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://backend.example/api/simulation/toggle",
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
   });
 });

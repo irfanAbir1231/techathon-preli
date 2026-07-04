@@ -5,9 +5,13 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 import { startDiscordBot } from "./bot.js";
 import {
+  getSimulationStatus,
   getOfficeSnapshot,
   getRoomState,
+  pauseSimulation,
   runAlertDetection,
+  resumeSimulation,
+  setSimulationRunning,
   startAlertEngine,
   startSimulation,
   stopSimulation,
@@ -45,6 +49,11 @@ const publishDashboardUpdate = (snapshot = getOfficeSnapshot()) => {
 app.get("/api/status", (req, res) => {
   console.log("[API] GET /api/status");
   res.status(200).json(getOfficeSnapshot());
+});
+
+app.get("/api/simulation", (req, res) => {
+  console.log("[API] GET /api/simulation");
+  res.status(200).json(getSimulationStatus());
 });
 
 app.get("/api/room/:roomName", (req, res) => {
@@ -92,6 +101,44 @@ app.post("/api/device/toggle", (req, res) => {
     device: updatedDevice,
     snapshot
   });
+});
+
+const respondWithSimulationState = (res, message, previousStatus) => {
+  const snapshot = getOfficeSnapshot();
+
+  if (previousStatus?.isRunning !== snapshot.simulation.isRunning) {
+    publishDashboardUpdate(snapshot);
+  }
+
+  res.status(200).json({
+    message,
+    simulation: snapshot.simulation,
+    snapshot
+  });
+};
+
+app.post("/api/simulation/pause", (req, res) => {
+  console.log("[API] POST /api/simulation/pause");
+  const previousStatus = getSimulationStatus();
+  pauseSimulation();
+  respondWithSimulationState(res, "Simulation paused", previousStatus);
+});
+
+app.post("/api/simulation/resume", (req, res) => {
+  console.log("[API] POST /api/simulation/resume");
+  const previousStatus = getSimulationStatus();
+  resumeSimulation(publishDashboardUpdate);
+  respondWithSimulationState(res, "Simulation resumed", previousStatus);
+});
+
+app.post("/api/simulation/toggle", (req, res) => {
+  console.log("[API] POST /api/simulation/toggle");
+  const previousStatus = getSimulationStatus();
+  const nextStatus = setSimulationRunning(!previousStatus.isRunning);
+  const message = nextStatus.isRunning
+    ? "Simulation resumed"
+    : "Simulation paused";
+  respondWithSimulationState(res, message, previousStatus);
 });
 
 app.use((req, res) => {

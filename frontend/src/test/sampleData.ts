@@ -34,6 +34,11 @@ export const sampleSnapshot: OfficeSnapshot = {
       timestamp: now
     }
   ],
+  simulation: {
+    isRunning: true,
+    intervalMs: 15000,
+    lastTick: now
+  },
   updatedAt: now
 };
 

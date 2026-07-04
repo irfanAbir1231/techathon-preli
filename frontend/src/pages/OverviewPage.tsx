@@ -17,7 +17,9 @@ export const OverviewPage = () => {
     lastReceivedAt,
     trend,
     pendingDeviceIds,
-    toggleDeviceById
+    pendingSimulationChange,
+    toggleDeviceById,
+    toggleSimulationRunning
   } = useOfficeDashboard();
 
   if (loading && !snapshot) {
@@ -51,8 +53,11 @@ export const OverviewPage = () => {
           <DiscordPreview />
           <SystemStatusCard
             hasSnapshot={Boolean(snapshot)}
+            pendingSimulationChange={pendingSimulationChange}
+            simulation={snapshot.simulation}
             socketStatus={socketStatus}
             lastReceivedAt={lastReceivedAt}
+            onToggleSimulation={toggleSimulationRunning}
           />
         </div>
       </div>

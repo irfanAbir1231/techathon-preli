@@ -1,18 +1,35 @@
 import { ServerCog } from "lucide-react";
-import type { SocketStatus } from "../../types/office";
+import type { SimulationStatus, SocketStatus } from "../../types/office";
 import { formatRelativeTime } from "../../utils/dateUtils";
 import { GlassCard } from "../common/GlassCard";
 
 export const SystemStatusCard = ({
   hasSnapshot,
+  pendingSimulationChange,
+  simulation,
   socketStatus,
-  lastReceivedAt
+  lastReceivedAt,
+  onToggleSimulation
 }: {
   hasSnapshot: boolean;
+  pendingSimulationChange: boolean;
+  simulation?: SimulationStatus;
   socketStatus: SocketStatus;
   lastReceivedAt: Date | null;
+  onToggleSimulation: () => Promise<void>;
 }) => {
   const receivingLiveUpdates = socketStatus === "live";
+  const hasSimulationStatus = Boolean(simulation);
+  const simulationLabel = simulation
+    ? simulation.isRunning
+      ? "Running"
+      : "Paused"
+    : "Unknown";
+  const simulationButtonLabel = pendingSimulationChange
+    ? "Updating..."
+    : simulation?.isRunning
+      ? "Pause Simulation"
+      : "Resume Simulation";
 
   return (
     <GlassCard className="panel-card">
@@ -34,13 +51,33 @@ export const SystemStatusCard = ({
           <span>Last event</span>
           <strong>{formatRelativeTime(lastReceivedAt)}</strong>
         </div>
-        <div className="row">
-          <span>Simulation</span>
-          <strong>
-            {receivingLiveUpdates
-              ? "Receiving automatic updates"
-              : "Simulation status unavailable"}
-          </strong>
+        <div className="simulation-control">
+          <div className="simulation-status-row">
+            <span>Live simulator</span>
+            <strong>
+              <span
+                className={`status-dot ${simulation?.isRunning ? "active" : "warning"}`}
+              />
+              {simulationLabel}
+            </strong>
+          </div>
+          <div className="simulation-meta">
+            <span>
+              Interval:{" "}
+              {simulation ? `${simulation.intervalMs / 1000} seconds` : "unknown"}
+            </span>
+            <span>Last tick: {formatRelativeTime(simulation?.lastTick)}</span>
+          </div>
+          <button
+            className="text-button simulation-toggle"
+            disabled={!hasSimulationStatus || pendingSimulationChange}
+            onClick={() => {
+              void onToggleSimulation();
+            }}
+            type="button"
+          >
+            {hasSimulationStatus ? simulationButtonLabel : "Simulation unavailable"}
+          </button>
         </div>
       </div>
     </GlassCard>
